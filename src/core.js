@@ -50,15 +50,25 @@ function humidity(s, ctx, now, m) {
   if (v >= '73') level = 'high';        // old switch: string "73" (JS comparison semantics kept)
   else if (v >= 63) level = 'medium';
   else return;
-  // trigger: op1 = this level at once (first message only), op2 'low' 20 min after the last one
+  // trigger: this level at once, 'low' 20 min after the last message. An escalation during a run
+  // (medium -> high) is sent at once too (2026-10-07; before, only the first level of a run was sent).
   const msg = { topic: LEVEL, payload: level, retain: m.retain };
-  if (!s.kwlTrigger) publish(ctx, LEVEL, level, m.retain);
+  const running = s.kwlTrigger;
+  if (!running || (running.level === 'medium' && level === 'high')) publish(ctx, LEVEL, level, m.retain);
   const tk = token(s);
-  s.kwlTrigger = { token: tk, msg };
+  s.kwlTrigger = { token: tk, msg, level: running && running.level === 'high' ? 'high' : level };
   ctx.timers.push({ key: `kwl:${tk}`, at: now + 20 * MIN });
 }
 
 function showerDrain(s, ctx, now, m) {
+  // the first value after a start only primes the filter (2026-10-07; before, it closed the gate
+  // after every restart because Node-RED's deadband treats an unknown previous value as a jump)
+  const primed = s.rbe.drain && s.rbe.drain[m.topic] !== undefined;
+  if (!primed) {
+    const n = parseFloat(m.payload);
+    if (!isNaN(n)) (s.rbe.drain = s.rbe.drain || {})[m.topic] = n;
+    return;
+  }
   if (!rbe(s, 'drain', { func: 'deadbandEq', gap: '25%' }, m.topic, m.payload)) return;
   s.gateClosed = true;
   const tk = token(s);

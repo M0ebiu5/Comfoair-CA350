@@ -36,19 +36,26 @@ test('humidity: >= 73 high, >= 63 medium, below nothing; low 20 min after the la
   r.mqtt(HUM, { value: 65 });
   assert.deepEqual(r.take(), [['red/cmd/comfoair/level', 'medium']]);
   r.at(10 * MIN).mqtt(HUM, { value: 80 });
-  assert.deepEqual(r.take(), [], 'quirk: an escalation to high is not sent while the trigger runs');
+  assert.deepEqual(r.take(), [['red/cmd/comfoair/level', 'high']], 'escalation is sent at once (fix 2026-10-07)');
+  r.at(12 * MIN).mqtt(HUM, { value: 65 });
+  assert.deepEqual(r.take(), [], 'no step back to medium during the run');
   r.at(29 * MIN).fire();
   assert.deepEqual(r.take(), []);
-  r.at(30 * MIN).fire();
+  r.at(31 * MIN).fire();
+  assert.deepEqual(r.take(), [], 'the 65 % at 12 min extended the run');
+  r.at(32 * MIN).fire();
   assert.deepEqual(r.take(), [['red/cmd/comfoair/level', 'low']]);
 });
 
-test('shower gate: a drain temperature jump closes it for 55 min (first value after start counts as a jump)', () => {
-  const r = rig().mqtt(DRAIN, '30.0');
+test('shower gate: the first drain value only primes (fix 2026-10-07); a jump closes it for 55 min', () => {
+  const r = rig().mqtt(DRAIN, '30.0').mqtt(HUM, { value: 90 });
+  assert.deepEqual(r.take(), [['red/cmd/comfoair/level', 'high']], 'gate still open after the first value');
+  r.at(21 * MIN).fire().take();
+  r.at(25 * MIN).mqtt(DRAIN, '40.0');   // +33 %: closes
   r.mqtt(HUM, { value: 90 });
   assert.deepEqual(r.take(), [], 'gate closed');
-  r.at(30 * MIN).mqtt(DRAIN, '31.0');   // +3 %: no new close
-  r.at(55 * MIN).fire().mqtt(HUM, { value: 90 });
+  r.at(50 * MIN).mqtt(DRAIN, '41.0');   // +2.5 %: no new close
+  r.at(80 * MIN).fire().mqtt(HUM, { value: 90 });
   assert.deepEqual(r.take(), [['red/cmd/comfoair/level', 'high']]);
 });
 

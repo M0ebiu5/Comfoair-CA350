@@ -69,6 +69,7 @@ for (let run = 0; run < RUNS; run++) {
   const agg = oldNode(code('AJV10_1', '36c865')), vent = oldNode(code('check ventilation')), gate = oldNode(code('Gate v2', 'a91f36'));
   const drainCfg = flows.find(n => n.z === OLD && n.type === 'rbe' && n.id.startsWith('7e892a'));
   const drainRbe = realRbe(drainCfg);
+  let seenDrain = false;
   let state = core.initialState();
   const newOut = [], oldOut = [];
   const step = ev => {
@@ -97,7 +98,9 @@ for (let run = 0; run < RUNS; run++) {
     } else if (k < 0.85) {   // shower gate closes
       const t = 'sensor/status/heating/kg_tr/tr1/friwarue', v = String(20 + Math.round(rand() * 20));
       const closed = drainRbe.run({ topic: t, payload: v });
-      if (closed) gate.run({ topic: 'control', payload: 'close' });   // old: rbe -> close
+      // intended change 2026-10-07: the first drain value after a start no longer closes the gate
+      if (closed && seenDrain) gate.run({ topic: 'control', payload: 'close' });   // old: rbe -> close
+      seenDrain = true;
       if (process.env.DEBUG && run === 0) console.log(new Date(NOW).toISOString().slice(5,16), 'drain', v, closed ? 'CLOSE' : '');
       step({ type: 'mqtt', topic: t, payload: v });
     } else {   // humidity through the gate: compare open/closed
