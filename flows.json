@@ -11,7 +11,7 @@
     "type": "comment",
     "z": "kwl2_tab",
     "name": "ℹ️ What this flow does (select → info sidebar)",
-    "info": "## KWL Heizung – ventilation and meters\n\nRewrite of the old tab `4d374e6a.8febd` (2026-10-07): 72 nodes, of which only these parts had an\neffect.\n\n| # | Input | Logic | Output |\n|---|---|---|---|\n| 1 | bath humidity `sensor/status/humidity/eg_bad/ht/9` | ≥ 73 % → `high`, ≥ 63 % → `medium`; an escalation to `high` during a run is sent at once; `low` 20 min after the last trigger. Blocked while the shower gate is closed. | `red/cmd/comfoair/level` |\n| 1b | shower drain `…/tr1/friwarue` | a change of ≥ 25 % closes the gate; it reopens 55 min after the last close (the first value after a start only primes) | – |\n| 2 | PV balance, outdoor `undef/w3/0`, indoor `undef/ws/0`, 5-min pulse | ventilation time cycle: `medium` 10 min, `low` 120 min (day 8–19 h) / 180 min, `medium` 60 min at 11:00 | `red/cmd/comfoair/level`, `red/event/kwl` |\n| 3 | `gasmeter/main/json` | changed value, `error == \"no error\"`, spike filter ±2 | `sensor/status/gas/kg_tr/gas` |\n| 4 | `watermeter/main/json` | changed value, no error, rising only, spike filter ±100 (reset Mo/We/Fr/Su 03:00) | `sensor/status/water/kg_tr/water` |\n\n### Decided 2026-10-07\n- **Kept** (user decision, no change): the ventilation time cycle stays dormant while the\n  outdoor sensor `undef/w3/0` doesn't report.\n- **Fixed:** an escalation `medium` → `high` during a humidity run is sent at once. Before, it\n  waited for the run to end.\n- **Fixed:** the first drain value after a restart no longer closes the shower gate.\n- **Not ported:** the old heating control, whose outputs were unwired.\n\n### Proof\n- **Shadow run** for gas, water and humidity.\n- **`tools/difftest.js`** runs the old tab's own function code (aggregator, `check ventilation`,\n  `Gate v2`) and Node-RED's real `rbe` against this core: 300 random runs with a mocked Vienna\n  clock, 6221 comparisons, 0 differences (with the intended gate fix modelled on the old side). The mutation check finds 93 and 56 differences.\n\n### Code\n`src/core.js` (pure), `src/node.js` (glue), `node --test test/`, `node build.js`, `nr-deploy.sh flows.json`.\n",
+    "info": "## KWL Heizung – ventilation and meters\n\nRewrite of the old tab `4d374e6a.8febd` (2026-10-07): 72 nodes, of which only these parts had an\neffect.\n\n| # | Input | Logic | Output |\n|---|---|---|---|\n| 1 | bath humidity `sensor/status/humidity/eg_bad/ht/9` | ≥ 73 % → `high`, ≥ 63 % → `medium`; an escalation to `high` during a run is sent at once; `low` 20 min after the last trigger. Blocked while the shower gate is closed. | `red/cmd/comfoair/level` |\n| 1b | shower drain `…/tr1/friwarue` | a change of ≥ 25 % closes the gate; it reopens 55 min after the last close (the first value after a start only primes) | – |\n| 2 | PV balance, outdoor `undef/w3/0`, indoor `undef/ws/0`, 5-min pulse | ventilation time cycle: `medium` 10 min, `low` 120 min (day 8–19 h) / 180 min, `medium` 60 min at 11:00 | `red/cmd/comfoair/level`, `red/event/kwl` |\n| 3 | `gasmeter/main/json` | changed value, `error == \"no error\"`, spike filter ±2 | `sensor/status/gas/kg_tr/gas` |\n| 4 | `watermeter/main/json` | changed value, no error, rising only, spike filter ±100 (reset Mo/We/Fr/Su 03:00) | `sensor/status/water/kg_tr/water` |\n\n**3 and 4 are switched off** (2026-10-08, user decision): both meters are offline (`…/connection` =\n\"connection lost\"). Their two MQTT inputs and the water reset inject are disabled in `build.js`\n(`OFF`); the logic is unchanged. To re-enable: empty `OFF`, rebuild, redeploy.\n\n### Decided 2026-10-07\n- **Kept** (user decision, no change): the ventilation time cycle stays dormant while the\n  outdoor sensor `undef/w3/0` doesn't report.\n- **Fixed:** an escalation `medium` → `high` during a humidity run is sent at once. Before, it\n  waited for the run to end.\n- **Fixed:** the first drain value after a restart no longer closes the shower gate.\n- **Not ported:** the old heating control, whose outputs were unwired.\n\n### Proof\n- **Shadow run** for gas, water and humidity.\n- **`tools/difftest.js`** runs the old tab's own function code (aggregator, `check ventilation`,\n  `Gate v2`) and Node-RED's real `rbe` against this core: 300 random runs with a mocked Vienna\n  clock, 6221 comparisons, 0 differences (with the intended gate fix modelled on the old side). The mutation check finds 93 and 56 differences.\n\n### Code\n`src/core.js` (pure), `src/node.js` (glue), `node --test test/`, `node build.js`, `nr-deploy.sh flows.json`.\n",
     "x": 230,
     "y": 40,
     "wires": []
@@ -21,7 +21,7 @@
     "type": "comment",
     "z": "kwl2_tab",
     "name": "📝 Changelog",
-    "info": "## Changelog\n\n### 2026-10-07 – decided changes (shipped with the switch to v2)\n- **Humidity:** an escalation `medium` → `high` during a run is sent at once.\n- **Shower gate:** the first drain value after a restart only primes the filter; it no longer closes the gate.\n\n### 2026-10-07 – v2: rewrite (replaces the old tab 4d374e6a.8febd, now disabled)\n- **Structure:** 72 nodes became one generated function node with tested logic.\n- **Behaviour is identical** (shadow run plus a differential test against the old code).\n- **Not ported:** the old heating control, whose outputs were unwired (no effect).\n",
+    "info": "## Changelog\n\n### 2026-10-08 – gas and water meters switched off\n- Both meters are offline. Their MQTT inputs and the water reset inject are disabled (logic unchanged).\n\n### 2026-10-08 – live\n- Switched to live at 01:07, with the decided changes. The shadow run saw no traffic on either side (gas and water meters offline, no shower), so the switch relied on the unit tests and the difftest against the old code.\n\n### 2026-10-07 – decided changes (shipped with the switch to v2)\n- **Humidity:** an escalation `medium` → `high` during a run is sent at once.\n- **Shower gate:** the first drain value after a restart only primes the filter; it no longer closes the gate.\n\n### 2026-10-07 – v2: rewrite (replaces the old tab 4d374e6a.8febd, now disabled)\n- **Structure:** 72 nodes became one generated function node with tested logic.\n- **Behaviour is identical** (differential test against the old code; the shadow run had no traffic).\n- **Not ported:** the old heating control, whose outputs were unwired (no effect).\n",
     "x": 600,
     "y": 40,
     "wires": []
@@ -51,8 +51,9 @@
     "id": "kwl2_in1",
     "type": "mqtt in",
     "z": "kwl2_tab",
-    "name": "gasmeter/main/json",
+    "name": "gasmeter/main/json (off)",
     "topic": "gasmeter/main/json",
+    "d": true,
     "qos": "0",
     "datatype": "json",
     "broker": "e36a332b.c61f3",
@@ -156,8 +157,9 @@
     "id": "kwl2_in6",
     "type": "mqtt in",
     "z": "kwl2_tab",
-    "name": "watermeter/main/json",
+    "name": "watermeter/main/json (off)",
     "topic": "watermeter/main/json",
+    "d": true,
     "qos": "0",
     "datatype": "json",
     "broker": "e36a332b.c61f3",
@@ -202,6 +204,7 @@
     "id": "kwl2_reset",
     "type": "inject",
     "z": "kwl2_tab",
+    "d": true,
     "name": "water band reset Mo/We/Fr/Su 03:00",
     "props": [
       {

@@ -11,6 +11,10 @@ effect.
 | 3 | `gasmeter/main/json` | changed value, `error == "no error"`, spike filter ±2 | `sensor/status/gas/kg_tr/gas` |
 | 4 | `watermeter/main/json` | changed value, no error, rising only, spike filter ±100 (reset Mo/We/Fr/Su 03:00) | `sensor/status/water/kg_tr/water` |
 
+**3 and 4 are switched off** (2026-10-08, user decision): both meters are offline (`…/connection` =
+"connection lost"). Their two MQTT inputs and the water reset inject are disabled in `build.js`
+(`OFF`); the logic is unchanged. To re-enable: empty `OFF`, rebuild, redeploy.
+
 ### Decided 2026-10-07
 - **Kept** (user decision, no change): the ventilation time cycle stays dormant while the
   outdoor sensor `undef/w3/0` doesn't report.

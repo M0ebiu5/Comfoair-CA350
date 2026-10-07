@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2026-10-08 – gas and water meters switched off
+- Both meters are offline. Their MQTT inputs and the water reset inject are disabled (logic unchanged).
+
 ### 2026-10-08 – live
 - Switched to live at 01:07, with the decided changes. The shadow run saw no traffic on either side (gas and water meters offline, no shower), so the switch relied on the unit tests and the difftest against the old code.
 

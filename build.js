@@ -8,6 +8,8 @@ const SHADOW = process.argv.includes('--shadow');
 const TAB = 'kwl2_tab';
 const BROKER = 'e36a332b.c61f3';
 const SUBS = require('./subs.json');
+// Switched off 2026-10-08 on user request: both meters offline ("connection lost"). Remove a topic to re-enable.
+const OFF = ['gasmeter/main/json', 'watermeter/main/json'];
 
 const src = f => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 const core = src('core.js').split("if (typeof module !== 'undefined')")[0].trim();
@@ -20,11 +22,11 @@ n.push({ id: TAB, type: 'tab', label: SHADOW ? 'KWL Heizung (shadow)' : 'KWL Hei
   info: 'Ventilation level from bath humidity (with shower gate), dormant ventilation time cycle, gas and water meters. Source: ~/projects/kwl on big.' });
 n.push({ id: 'kwl2_info', type: 'comment', z: TAB, name: 'ℹ️ What this flow does (select → info sidebar)', info: read('README.md'), x: 230, y: 40, wires: [] });
 n.push({ id: 'kwl2_changelog', type: 'comment', z: TAB, name: '📝 Changelog', info: read('CHANGELOG.md'), x: 600, y: 40, wires: [] });
-SUBS.forEach(([topic, datatype], i) => n.push({ id: `kwl2_in${i}`, type: 'mqtt in', z: TAB, name: topic, topic, qos: '0', datatype,
+SUBS.forEach(([topic, datatype], i) => n.push({ id: `kwl2_in${i}`, type: 'mqtt in', z: TAB, name: OFF.includes(topic) ? `${topic} (off)` : topic, topic, ...(OFF.includes(topic) ? { d: true } : {}), qos: '0', datatype,
   broker: BROKER, nl: false, rap: true, rh: 0, inputs: 0, x: 230, y: 100 + i * 45, wires: [['kwl2_core']] }));
 n.push({ id: 'kwl2_pulse', type: 'inject', z: TAB, name: 'pulse 5 min (ventilation cycle)', props: [{ p: 'kwlInject', v: 'pulse', vt: 'str' }],
   repeat: '300', crontab: '', once: false, onceDelay: '', topic: '', x: 230, y: 100 + SUBS.length * 45, wires: [['kwl2_core']] });
-n.push({ id: 'kwl2_reset', type: 'inject', z: TAB, name: 'water band reset Mo/We/Fr/Su 03:00', props: [{ p: 'kwlInject', v: 'water-reset', vt: 'str' }],
+n.push({ id: 'kwl2_reset', type: 'inject', z: TAB, ...(OFF.includes('watermeter/main/json') ? { d: true } : {}), name: 'water band reset Mo/We/Fr/Su 03:00', props: [{ p: 'kwlInject', v: 'water-reset', vt: 'str' }],
   repeat: '', crontab: '00 03 * * 1,3,5,0', once: false, onceDelay: '', topic: '', x: 250, y: 145 + SUBS.length * 45, wires: [['kwl2_core']] });
 n.push({ id: 'kwl2_core', type: 'function', z: TAB, name: 'ventilation & meters', func, outputs: 1, timeout: 0, noerr: 0, initialize: '', libs: [],
   finalize: "for (const h of (context.get('timers') || [])) clearTimeout(h);\ncontext.set('timers', undefined);",
