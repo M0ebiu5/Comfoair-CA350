@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2026-10-08 – live
+- Switched to live at 01:07, with the decided changes. The shadow run saw no traffic on either side (gas and water meters offline, no shower), so the switch relied on the unit tests and the difftest against the old code.
+
 ### 2026-10-07 – decided changes (shipped with the switch to v2)
 - **Humidity:** an escalation `medium` → `high` during a run is sent at once.
 - **Shower gate:** the first drain value after a restart only primes the filter; it no longer closes the gate.
