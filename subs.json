@@ -1,0 +1,30 @@
+[
+ [
+  "sensor/status/power/power/eme/balance",
+  "json"
+ ],
+ [
+  "gasmeter/main/json",
+  "json"
+ ],
+ [
+  "sensor/status/temperature/undef/w3/0",
+  "auto"
+ ],
+ [
+  "sensor/status/temperature/undef/ws/0",
+  "auto"
+ ],
+ [
+  "sensor/status/humidity/eg_bad/ht/9",
+  "json"
+ ],
+ [
+  "sensor/status/heating/kg_tr/tr1/friwarue",
+  "utf8"
+ ],
+ [
+  "watermeter/main/json",
+  "json"
+ ]
+]

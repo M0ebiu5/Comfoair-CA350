@@ -1,0 +1,262 @@
+[
+  {
+    "id": "kwl2_tab",
+    "type": "tab",
+    "label": "KWL Heizung",
+    "disabled": false,
+    "info": "Ventilation level from bath humidity (with shower gate), dormant ventilation time cycle, gas and water meters. Source: ~/projects/kwl on big."
+  },
+  {
+    "id": "kwl2_info",
+    "type": "comment",
+    "z": "kwl2_tab",
+    "name": "ℹ️ What this flow does (select → info sidebar)",
+    "info": "## KWL Heizung – ventilation and meters\n\nRewrite of the old tab `4d374e6a.8febd` (2026-10-07): 72 nodes, of which only these parts had an\neffect.\n\n| # | Input | Logic | Output |\n|---|---|---|---|\n| 1 | bath humidity `sensor/status/humidity/eg_bad/ht/9` | ≥ 73 % → `high`, ≥ 63 % → `medium`; only the first level of a run is sent; `low` 20 min after the last trigger. Blocked while the shower gate is closed. | `red/cmd/comfoair/level` |\n| 1b | shower drain `…/tr1/friwarue` | a change of ≥ 25 % closes the gate; it reopens 55 min after the last close (the first value after a start counts as a change) | – |\n| 2 | PV balance, outdoor `undef/w3/0`, indoor `undef/ws/0`, 5-min pulse | ventilation time cycle: `medium` 10 min, `low` 120 min (day 8–19 h) / 180 min, `medium` 60 min at 11:00 | `red/cmd/comfoair/level`, `red/event/kwl` |\n| 3 | `gasmeter/main/json` | changed value, `error == \"no error\"`, spike filter ±2 | `sensor/status/gas/kg_tr/gas` |\n| 4 | `watermeter/main/json` | changed value, no error, rising only, spike filter ±100 (reset Mo/We/Fr/Su 03:00) | `sensor/status/water/kg_tr/water` |\n\n### Known problems, kept on purpose (decide one by one)\n1. **The ventilation time cycle (2) is dormant.** It needs the outdoor sensor `undef/w3/0`, which\n   doesn't report (no flow publishes it, and the old aggregator had never received it). If the\n   sensor reports again, the cycle starts switching the ventilation.\n2. **While a humidity run is active, an escalation (medium → high) is not sent.**\n3. **The gate closes on the first drain value after every restart.**\n4. **The heating control of the old tab is not ported:** both of its outputs were unwired, so it\n   never switched anything.\n\n### Proof\n- **Shadow run** for gas, water and humidity.\n- **`tools/difftest.js`** runs the old tab's own function code (aggregator, `check ventilation`,\n  `Gate v2`) and Node-RED's real `rbe` against this core: 300 random runs with a mocked Vienna\n  clock, 6221 comparisons, 0 differences. The mutation check finds 93 and 56 differences.\n\n### Code\n`src/core.js` (pure), `src/node.js` (glue), `node --test test/`, `node build.js`, `nr-deploy.sh flows.json`.\n",
+    "x": 230,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "kwl2_changelog",
+    "type": "comment",
+    "z": "kwl2_tab",
+    "name": "📝 Changelog",
+    "info": "## Changelog\n\n### 2026-10-07 – v2: rewrite (replaces the old tab 4d374e6a.8febd, now disabled)\n- **Structure:** 72 nodes became one generated function node with tested logic.\n- **Behaviour is identical** (shadow run plus a differential test against the old code).\n- **Not ported:** the old heating control, whose outputs were unwired (no effect).\n",
+    "x": 600,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "kwl2_in0",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "sensor/status/power/power/eme/balance",
+    "topic": "sensor/status/power/power/eme/balance",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 100,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in1",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "gasmeter/main/json",
+    "topic": "gasmeter/main/json",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 145,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in2",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "sensor/status/temperature/undef/w3/0",
+    "topic": "sensor/status/temperature/undef/w3/0",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 190,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in3",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "sensor/status/temperature/undef/ws/0",
+    "topic": "sensor/status/temperature/undef/ws/0",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 235,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in4",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "sensor/status/humidity/eg_bad/ht/9",
+    "topic": "sensor/status/humidity/eg_bad/ht/9",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 280,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in5",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "sensor/status/heating/kg_tr/tr1/friwarue",
+    "topic": "sensor/status/heating/kg_tr/tr1/friwarue",
+    "qos": "0",
+    "datatype": "utf8",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 325,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_in6",
+    "type": "mqtt in",
+    "z": "kwl2_tab",
+    "name": "watermeter/main/json",
+    "topic": "watermeter/main/json",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "e36a332b.c61f3",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 230,
+    "y": 370,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_pulse",
+    "type": "inject",
+    "z": "kwl2_tab",
+    "name": "pulse 5 min (ventilation cycle)",
+    "props": [
+      {
+        "p": "kwlInject",
+        "v": "pulse",
+        "vt": "str"
+      }
+    ],
+    "repeat": "300",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "x": 230,
+    "y": 415,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_reset",
+    "type": "inject",
+    "z": "kwl2_tab",
+    "name": "water band reset Mo/We/Fr/Su 03:00",
+    "props": [
+      {
+        "p": "kwlInject",
+        "v": "water-reset",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "00 03 * * 1,3,5,0",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "x": 250,
+    "y": 460,
+    "wires": [
+      [
+        "kwl2_core"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_core",
+    "type": "function",
+    "z": "kwl2_tab",
+    "name": "ventilation & meters",
+    "func": "// GENERATED by build.js from src/core.js + src/node.js - edit those, run the tests, rebuild.\nconst core = (function () {\n// KWL Heizung (ventilation + gas/water meters) - decision core.\n//\n// Pure logic: decide(state, event) -> { state, out, timers, logs }; no Node-RED APIs, no clock\n// (events carry `at` and the local Vienna hour `hour`). Faithful port of the live part of the old\n// tab 4d374e6a.8febd. Its heating control is not ported: both of its outputs were unwired (no effect).\n//\n//   event: {type:'mqtt', topic, payload, retain, at, hour} | {type:'inject', name, at, hour} | {type:'timer', key, at, hour}\n//   out:   {to:'mqtt', msg:{topic, payload, retain}}\n\n'use strict';\n\nconst MIN = 60e3;\nconst LEVEL = 'red/cmd/comfoair/level';\nconst clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));\nconst get = (o, path) => path.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);\nconst publish = (ctx, topic, payload, retain, extra = {}) => ctx.out.push({ to: 'mqtt', msg: { topic, payload, retain: !!retain, ...extra } });\nconst token = s => String((s.seq = (s.seq || 0) + 1));\n\n// Node-RED rbe node subset used here (per topic): 'rbe' and the numeric band modes with inout 'out'\nfunction rbe(s, node, opt, topic, value) {\n  if (value === undefined) return false;\n  const prev = (s.rbe[node] = s.rbe[node] || {});\n  const t = topic || '_no_topic';\n  if (!opt.func) {\n    const same = typeof value === 'object' ? JSON.stringify(value) === JSON.stringify(prev[t]) : value === prev[t];\n    if (same) return false;\n    prev[t] = clone(value);\n    return true;\n  }\n  const n = parseFloat(value);\n  if (isNaN(n)) return false;\n  const pc = String(opt.gap).endsWith('%');\n  if (prev[t] === undefined && (opt.func === 'narrowband' || opt.func === 'narrowbandEq')) prev[t] = n;\n  const gap = pc ? (Math.abs(prev[t] * parseFloat(opt.gap) / 100) || 0) : Number(opt.gap);\n  if (prev[t] === undefined) prev[t] = n - gap - 1;\n  const d = Math.abs(n - prev[t]);\n  const pass = d === gap ? (opt.func === 'deadbandEq' || opt.func === 'narrowband')\n    : d > gap ? (opt.func === 'deadband' || opt.func === 'deadbandEq')\n      : (opt.func === 'narrowband' || opt.func === 'narrowbandEq');\n  if (pass) prev[t] = n;   // inout 'out'\n  return pass;\n}\n\n// ---- 1. bath humidity -> ventilation level, unless the shower gate is closed -----------------\n// \"Gate v2\": closed by a shower-drain temperature jump, reopened 55 min after the last close.\nfunction humidity(s, ctx, now, m) {\n  if (s.gateClosed) return;\n  const v = get(m.payload, 'value');\n  let level;\n  if (v >= '73') level = 'high';        // old switch: string \"73\" (JS comparison semantics kept)\n  else if (v >= 63) level = 'medium';\n  else return;\n  // trigger: op1 = this level at once (first message only), op2 'low' 20 min after the last one\n  const msg = { topic: LEVEL, payload: level, retain: m.retain };\n  if (!s.kwlTrigger) publish(ctx, LEVEL, level, m.retain);\n  const tk = token(s);\n  s.kwlTrigger = { token: tk, msg };\n  ctx.timers.push({ key: `kwl:${tk}`, at: now + 20 * MIN });\n}\n\nfunction showerDrain(s, ctx, now, m) {\n  if (!rbe(s, 'drain', { func: 'deadbandEq', gap: '25%' }, m.topic, m.payload)) return;\n  s.gateClosed = true;\n  const tk = token(s);\n  s.gateToken = tk;\n  ctx.timers.push({ key: `gate:${tk}`, at: now + 55 * MIN });\n}\n\n// ---- 2. ventilation time cycle (dormant: needs the outdoor sensor undef/w3/0) ------------------\nconst CYCLE_TOPICS = ['sensor/status/power/power/eme/balance', 'sensor/status/temperature/undef/w3/0',\n  'sensor/status/temperature/undef/ws/0', 'timestamp'];\n\nfunction cycleInput(s, ctx, now, hour, topic) {\n  s.cycleSeen[topic] = true;\n  if (!CYCLE_TOPICS.every(t => s.cycleSeen[t])) return;   // old aggregator: all 4 topics present\n  const v = s.vent || (s.vent = { runtime: 0, runfor: 0, start: now, state: 'undef', reason: 'default', label: '' });\n  let oldstate = v.state;\n  const day = hour > 7 && hour < 20;\n  if (v.runtime > v.runfor * 60e3) {\n    if (hour === 11) { v.runfor = 60; v.state = 'medium'; oldstate = ''; }\n    else if (v.state === 'medium' || v.state === 'high') {\n      v.state = 'low'; v.reason = 'time limit'; v.label = 'Lüftung (zeitgesteuert).';\n      v.runfor = day ? 120 : 180; v.start = now;\n    } else { v.runfor = 10; v.start = now; v.state = 'medium'; }\n  }\n  if (v.state === oldstate) { v.runtime = now - v.start; return; }\n  v.runtime = 0;\n  v.start = now;\n  publish(ctx, LEVEL, v.state, false, { reason: v.reason });\n  publish(ctx, 'red/event/kwl', { value: v.state, reason: v.reason, label: v.label }, false, { tst: now });\n}\n\n// ---- 3./4. gas and water meters ---------------------------------------------------------------\nfunction meter(s, ctx, m, kind) {\n  if (!rbe(s, `${kind}-changed`, {}, m.topic, get(m.payload, 'value'))) return;\n  if (get(m.payload, 'error') != 'no error') return;   // eslint-disable-line eqeqeq\n  const raw = get(m.payload, 'value');\n  const value = typeof raw === 'number' ? raw : Number(raw);   // JSONata $number\n  if (raw === undefined || isNaN(value)) return;               // $number error -> dropped\n  const topic = kind === 'gas' ? 'sensor/status/gas/kg_tr/gas' : 'sensor/status/water/kg_tr/water';\n  if (kind === 'water') {\n    const prev = s.waterPrev;   // switch \"gt previous value\": previous is updated on every message\n    s.waterPrev = value;\n    if (!(value > prev)) return;\n  }\n  if (!rbe(s, `${kind}-band`, { func: 'narrowband', gap: kind === 'gas' ? '2' : '100' }, topic, value)) return;\n  publish(ctx, topic, value, m.retain);\n}\n\n// ---- entry -------------------------------------------------------------------------------------\nconst RULES = {\n  'sensor/status/humidity/eg_bad/ht/9': humidity,\n  'sensor/status/heating/kg_tr/tr1/friwarue': showerDrain,\n  'gasmeter/main/json': (s, ctx, now, m) => meter(s, ctx, m, 'gas'),\n  'watermeter/main/json': (s, ctx, now, m) => meter(s, ctx, m, 'water'),\n};\n\nfunction initialState() { return { rbe: {}, cycleSeen: {}, seq: 0 }; }\n\nfunction decide(prev, ev) {\n  const s = clone(prev);\n  const ctx = { out: [], timers: [], logs: [] };\n  const now = ev.at;\n  if (ev.type === 'mqtt') {\n    const m = { topic: ev.topic, payload: clone(ev.payload), retain: !!ev.retain };\n    if (RULES[ev.topic]) RULES[ev.topic](s, ctx, now, m);\n    if (CYCLE_TOPICS.includes(ev.topic)) cycleInput(s, ctx, now, ev.hour, ev.topic);\n  } else if (ev.type === 'inject') {\n    if (ev.name === 'pulse') cycleInput(s, ctx, now, ev.hour, 'timestamp');\n    if (ev.name === 'water-reset') delete (s.rbe['water-band'] || {})['sensor/status/water/kg_tr/water'];\n  } else if (ev.type === 'timer') {\n    const [kind, tk] = ev.key.split(':');\n    if (kind === 'kwl' && s.kwlTrigger && s.kwlTrigger.token === tk) {\n      const { msg } = s.kwlTrigger;\n      delete s.kwlTrigger;\n      publish(ctx, msg.topic, 'low', msg.retain);\n    }\n    if (kind === 'gate' && s.gateToken === tk) s.gateClosed = false;\n  }\n  return { state: s, ...ctx };\n}\nreturn { initialState, decide };\n})();\n\n// Function-node body: the only place that touches Node-RED. build.js prepends the core.\n// The container runs in Europe/Vienna, so new Date().getHours() is the local hour, like the old code.\nfunction handle(ev) {\n    const res = core.decide(context.get('state') || core.initialState(), ev);\n    context.set('state', res.state);\n    for (const l of res.logs) node.warn(l.text);\n    const timers = context.get('timers') || new Set();\n    for (const t of res.timers) {\n        const h = setTimeout(() => { timers.delete(h); handle({ type: 'timer', key: t.key, at: Date.now(), hour: new Date().getHours() }); },\n                             Math.max(0, t.at - Date.now()));\n        timers.add(h);\n    }\n    context.set('timers', timers);\n    if (res.out.length) node.send([res.out.map(o => o.msg)]);\n}\n\nconst now = Date.now(), hour = new Date(now).getHours();\nif (msg.kwlInject) handle({ type: 'inject', name: msg.kwlInject, at: now, hour });\nelse handle({ type: 'mqtt', topic: String(msg.topic), payload: msg.payload, retain: !!msg.retain, at: now, hour });\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "libs": [],
+    "finalize": "for (const h of (context.get('timers') || [])) clearTimeout(h);\ncontext.set('timers', undefined);",
+    "outputLabels": [
+      "MQTT"
+    ],
+    "x": 580,
+    "y": 260,
+    "wires": [
+      [
+        "kwl2_mqtt"
+      ]
+    ]
+  },
+  {
+    "id": "kwl2_mqtt",
+    "type": "mqtt out",
+    "z": "kwl2_tab",
+    "name": "MQTT (retain from msg)",
+    "topic": "",
+    "qos": "0",
+    "retain": "",
+    "broker": "e36a332b.c61f3",
+    "x": 800,
+    "y": 260,
+    "wires": []
+  }
+]
