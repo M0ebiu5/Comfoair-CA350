@@ -58,8 +58,9 @@ function realRbe(config) {
   return { run: m => { sent.length = 0; handlers.input.call(self, m); return sent.length > 0; } };
 }
 
-let rnd = 42;
-const rand = () => ((rnd = (rnd * 1103515245 + 12345) % 2147483648) / 2147483648);
+let seed = 42;   // mulberry32 (2026-10-08: the LCG used before had correlated draws)
+const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const TOPICS = core.CYCLE_TOPICS;
 let compared = 0, diffs = 0;
 
