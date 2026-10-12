@@ -1,5 +1,11 @@
 ## Changelog
 
+### 2026-10-12 – timers survive redeploys
+- **Bug (latent, same as Database Storage):** a redeploy killed the node's pending timers but kept its state, so
+  whatever waited for such a timer could stay stuck until the next Node-RED restart.
+- **Fix:** pending timers are also kept in context; a start-up inject (`*_restore`) and the first message after a
+  (re)start re-create them, overdue ones at once. Core logic unchanged. Test: `test/restore.test.js`.
+
 ### 2026-10-08 – gas and water meters switched off
 - Both meters are offline. Their MQTT inputs and the water reset inject are disabled (logic unchanged).
 

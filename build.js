@@ -38,6 +38,10 @@ if (SHADOW) {
 } else {
   n.push({ id: 'kwl2_mqtt', type: 'mqtt out', z: TAB, name: 'MQTT (retain from msg)', topic: '', qos: '0', retain: '', broker: BROKER, x: 800, y: 260, wires: [] });
 }
+// After a (re)deploy: restore the core's pending timers even when no message arrives (2026-10-12).
+n.push({ id: 'kwl2_restore', type: 'inject', z: TAB, name: 'restore timers after (re)start', props: [{ p: 'topic', vt: 'str' }],
+  topic: '__restore_timers__', repeat: '', crontab: '', once: true, onceDelay: '1', x: 150, y: 20, wires: [['kwl2_core']] });
+
 const file = SHADOW ? 'flows-shadow.json' : 'flows.json';
 fs.writeFileSync(path.join(__dirname, file), JSON.stringify(n, null, 2) + '\n');
 console.log(`${file}: ${n.length} nodes (function ${func.length} chars)`);
